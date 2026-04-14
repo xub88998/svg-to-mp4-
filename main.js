@@ -1,5 +1,9 @@
-// CDN থেকে স্ক্রিপ্ট লোড করার জন্য এটি সরাসরি ব্যবহার করা হচ্ছে
-const { FFmpeg } = FFmpegWASM;
+const { FFmpeg } = window.FFmpegWASM || {};
+
+if (!FFmpeg) {
+    alert("FFmpeg লাইব্রেরি লোড হতে পারেনি। দয়া করে পেজটি রিফ্রেশ দিন বা vercel.json চেক করুন।");
+}
+
 const ffmpeg = new FFmpeg();
 
 const toBlobURL = async (url, mimeType) => {
@@ -27,7 +31,7 @@ document.getElementById('convertBtn').addEventListener('click', async () => {
     }
 
     try {
-        status.innerText = "Loading FFmpeg...";
+        status.innerText = "Loading FFmpeg (This may take a moment)...";
         if (!ffmpeg.loaded) await loadFFmpeg();
 
         status.innerText = "Processing SVG to MP4...";
@@ -35,7 +39,7 @@ document.getElementById('convertBtn').addEventListener('click', async () => {
         const svgData = await svgFile.arrayBuffer();
         await ffmpeg.writeFile('input.svg', new Uint8Array(svgData));
 
-        // SVG থেকে MP4 এ কনভার্ট করার কমান্ড
+        // SVG থেকে MP4 কনভার্ট করার কমান্ড
         await ffmpeg.exec(['-r', '25', '-i', 'input.svg', '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4']);
 
         const data = await ffmpeg.readFile('output.mp4');
@@ -52,5 +56,6 @@ document.getElementById('convertBtn').addEventListener('click', async () => {
     } catch (error) {
         console.error(error);
         status.innerText = "Error: " + error.message;
+        alert("Error occurred: " + error.message);
     }
 });
