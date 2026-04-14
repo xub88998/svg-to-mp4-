@@ -1,7 +1,13 @@
-import { FFmpeg } from
-'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js';
+import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js';
 
 const ffmpeg = new FFmpeg();
+
+const toBlobURL = async (url, mimeType) => {
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    const blob = new Blob([buffer], { type: mimeType });
+    return URL.createObjectURL(blob);
+};
 
 const loadFFmpeg = async () => {
     const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
@@ -25,22 +31,21 @@ document.getElementById('convertBtn').addEventListener('click', async () => {
 
     status.innerText = "Processing SVG to MP4...";
     
-    const svgData = await fetchFile(svgFile);
-    await ffmpeg.writeFile('input.svg', svgData);
+    const svgData = await svgFile.arrayBuffer();
+    await ffmpeg.writeFile('input.svg', new Uint8Array(svgData));
 
-    // SVG থেকে MP4 এ কনভার্ট করার কমান্ড
-    await ffmpeg.exec(['-i', 'input.svg', 'output.mp4']);
+    // Simple conversion command
+    await ffmpeg.exec(['-r', '25', '-i', 'input.svg', '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4']);
 
     const data = await ffmpeg.readFile('output.mp4');
-    const video = document.getElementById('outputVideo');
-    video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-    video.style.display = 'block';
+    const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+    const url = URL.createObjectURL(videoBlob);
 
-    // অটোমেটিক ডাউনলোড
-    const downloadLink = document.createElement('a');
-    downloadLink.href = video.src;
-    downloadLink.download = 'converted_video.mp4';
-    downloadLink.click();
-
+    const downloadLink = document.getElementById('downloadLink');
+    downloadLink.href = url;
+    downloadLink.download = 'animation.mp4';
+    downloadLink.style.display = 'block';
+    downloadLink.innerText = 'Download MP4';
+    
     status.innerText = "Conversion Complete!";
 });
