@@ -1,5 +1,5 @@
-import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js';
-
+// CDN থেকে স্ক্রিপ্ট লোড করার জন্য এটি সরাসরি ব্যবহার করা হচ্ছে
+const { FFmpeg } = FFmpegWASM;
 const ffmpeg = new FFmpeg();
 
 const toBlobURL = async (url, mimeType) => {
@@ -26,26 +26,31 @@ document.getElementById('convertBtn').addEventListener('click', async () => {
         return;
     }
 
-    status.innerText = "Loading FFmpeg...";
-    if (!ffmpeg.loaded) await loadFFmpeg();
+    try {
+        status.innerText = "Loading FFmpeg...";
+        if (!ffmpeg.loaded) await loadFFmpeg();
 
-    status.innerText = "Processing SVG to MP4...";
-    
-    const svgData = await svgFile.arrayBuffer();
-    await ffmpeg.writeFile('input.svg', new Uint8Array(svgData));
+        status.innerText = "Processing SVG to MP4...";
+        
+        const svgData = await svgFile.arrayBuffer();
+        await ffmpeg.writeFile('input.svg', new Uint8Array(svgData));
 
-    // Simple conversion command
-    await ffmpeg.exec(['-r', '25', '-i', 'input.svg', '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4']);
+        // SVG থেকে MP4 এ কনভার্ট করার কমান্ড
+        await ffmpeg.exec(['-r', '25', '-i', 'input.svg', '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4']);
 
-    const data = await ffmpeg.readFile('output.mp4');
-    const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-    const url = URL.createObjectURL(videoBlob);
+        const data = await ffmpeg.readFile('output.mp4');
+        const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+        const url = URL.createObjectURL(videoBlob);
 
-    const downloadLink = document.getElementById('downloadLink');
-    downloadLink.href = url;
-    downloadLink.download = 'animation.mp4';
-    downloadLink.style.display = 'block';
-    downloadLink.innerText = 'Download MP4';
-    
-    status.innerText = "Conversion Complete!";
+        const downloadLink = document.getElementById('downloadLink');
+        downloadLink.href = url;
+        downloadLink.download = 'animation.mp4';
+        downloadLink.style.display = 'block';
+        downloadLink.innerText = 'Download MP4';
+        
+        status.innerText = "Conversion Complete!";
+    } catch (error) {
+        console.error(error);
+        status.innerText = "Error: " + error.message;
+    }
 });
