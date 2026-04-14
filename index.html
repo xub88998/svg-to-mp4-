@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG to MP4 Converter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>SVG to MP4 Converter</h1>
+        <p>সুপার ফাস্ট কনভারশন, কোনো কোয়ালিটি লস নেই!</p>
+        
+        <input type="file" id="svgInput" accept=".svg">
+        
+        <div class="options">
+            <label>Quality:</label>
+            <select id="quality">
+                <option value="18">High (Best)</option>
+                <option value="23" selected>Medium</option>
+                <option value="28">Low (Small Size)</option>
+            </select>
+        </div>
+
+        <button id="convertBtn">Convert to MP4</button>
+        <div id="status"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.0/dist/util.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
