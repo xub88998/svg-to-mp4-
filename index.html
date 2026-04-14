@@ -1,33 +1,229 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SVG to MP4 Converter</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 12px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+        }
+        #downloadLink {
+            display: none;
+            margin-top: 20px;
+            padding: 14px;
+            background: #48bb78;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        #downloadLink:hover {
+            background: #38a169;
+        }
+        .note {
+            margin-top: 20px;
+            padding: 10px;
+            background: #fef5e7;
+            border-left: 4px solid #f39c12;
+            font-size: 12px;
+            color: #856404;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>SVG to MP4 Converter</h1>
-        <p>সুপার ফাস্ট কনভারশন, কোনো কোয়ালিটি লস নেই!</p>
+    <div class="card">
+        <h1>🎬 SVG to MP4 Converter</h1>
+        <div class="subtitle">Convert SVG animations to MP4 video</div>
         
-        <input type="file" id="svgInput" accept=".svg">
-        
-        <div class="options">
-            <label>Quality:</label>
-            <select id="quality">
-                <option value="18">High (Best)</option>
-                <option value="23" selected>Medium</option>
-                <option value="28">Low (Small Size)</option>
-            </select>
-        </div>
-
+        <input type="file" id="svgInput" accept=".svg" />
         <button id="convertBtn">Convert to MP4</button>
-        <div id="status"></div>
+        
+        <div id="status">✅ Ready. Select an SVG file.</div>
+        <a id="downloadLink" download>⬇️ Download MP4 Video</a>
+        
+        <div class="note">
+            💡 <strong>Note:</strong> First conversion takes 10-15 seconds to load FFmpeg.<br>
+            📌 Make sure your SVG file is valid (max 10MB).<br>
+            🔄 Works best with animated SVG files.
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.0/dist/util.min.js"></script>
-    <script src="main.js" type="module"></script>
+    <script>
+        // এই ভার্সনটি কাজ করবে - FFmpeg 0.11.6 (stable)
+        const convertBtn = document.getElementById('convertBtn');
+        const svgInput = document.getElementById('svgInput');
+        const statusDiv = document.getElementById('status');
+        const downloadLink = document.getElementById('downloadLink');
+        
+        let ffmpeg = null;
+        let isFFmpegLoaded = false;
+        
+        // Load FFmpeg (only once)
+        async function loadFFmpeg() {
+            if (isFFmpegLoaded) return ffmpeg;
+            
+            statusDiv.innerHTML = '📥 Loading FFmpeg (10-15 seconds)... <div class="loading"></div>';
+            
+            try {
+                // Dynamic import for FFmpeg 0.11.6
+                const { createFFmpeg, fetchFile } = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js');
+                
+                ffmpeg = createFFmpeg({ 
+                    log: true,
+                    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js'
+                });
+                
+                await ffmpeg.load();
+                isFFmpegLoaded = true;
+                statusDiv.innerHTML = '✅ FFmpeg loaded! Ready to convert.';
+                return ffmpeg;
+                
+            } catch (error) {
+                console.error('FFmpeg load error:', error);
+                statusDiv.innerHTML = '❌ Failed to load FFmpeg. Please refresh and try again.';
+                throw error;
+            }
+        }
+        
+        // Convert SVG to MP4
+        async function convertToMP4(file) {
+            try {
+                const ffmpegInstance = await loadFFmpeg();
+                
+                statusDiv.innerHTML = '🔄 Converting SVG to MP4... <div class="loading"></div>';
+                
+                // Write SVG file
+                ffmpegInstance.FS('writeFile', 'input.svg', await fetchFile(file));
+                
+                // Run FFmpeg command
+                await ffmpegInstance.run(
+                    '-r', '25',           // 25 fps
+                    '-i', 'input.svg',    // input file
+                    '-c:v', 'libx264',    // video codec
+                    '-pix_fmt', 'yuv420p', // pixel format
+                    '-y',                 // overwrite output
+                    'output.mp4'          // output file
+                );
+                
+                // Read output file
+                const data = ffmpegInstance.FS('readFile', 'output.mp4');
+                
+                // Create blob and download link
+                const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+                const url = URL.createObjectURL(videoBlob);
+                
+                downloadLink.href = url;
+                downloadLink.style.display = 'block';
+                statusDiv.innerHTML = '✅ Conversion complete! Click download button.';
+                
+            } catch (error) {
+                console.error('Conversion error:', error);
+                statusDiv.innerHTML = '❌ Conversion failed: ' + error.message;
+            }
+        }
+        
+        // Event listener
+        convertBtn.addEventListener('click', async () => {
+            const file = svgInput.files[0];
+            
+            if (!file) {
+                alert('Please select an SVG file first!');
+                return;
+            }
+            
+            if (!file.name.endsWith('.svg')) {
+                alert('Please select a valid SVG file!');
+                return;
+            }
+            
+            // Disable button during conversion
+            convertBtn.disabled = true;
+            convertBtn.textContent = 'Processing...';
+            downloadLink.style.display = 'none';
+            
+            await convertToMP4(file);
+            
+            // Re-enable button
+            convertBtn.disabled = false;
+            convertBtn.textContent = 'Convert to MP4';
+        });
+        
+        // Show file name when selected
+        svgInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                statusDiv.innerHTML = `📁 Selected: ${e.target.files[0].name}`;
+            }
+        });
+    </script>
 </body>
 </html>
